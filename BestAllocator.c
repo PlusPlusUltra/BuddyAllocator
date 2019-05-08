@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <math.h>
-int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level);
 //functions to work with integers as if they were bits
 //i will store the bitmap as an array of integers and then work with the single bits of each integer
 void setBit(int array[], int bitIndex) //sets the bit at index bitIndex
@@ -32,11 +31,13 @@ int getBit(int array[], int bitIndex) //returns the value of the bit at index bi
 }
 //let's create the struct
 typedef struct {
-	int tree[];
 	int num_levels;
 	char* memory;
 	int min_bucket_size;
+	int tree[];
+
 } BuddyAllocator;
+int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level);
 //tree functions
 int levelIdx(size_t idx)
 {
@@ -68,14 +69,14 @@ void* chunkGivenIndex(BuddyAllocator* alloc, int idx){
 	int toAdd = alloc->min_bucket_size * (alloc->num_levels - level) * (idx - firstOfLevel);
 	return alloc->memory + toAdd;
 }
-void* BuddyAllocator_malloc(BuddyAllocator alloc, int size){
+void* BuddyAllocator_malloc(BuddyAllocator* alloc, int size){
 	//calculate max mem
-	int mem_size= (1<<alloc->num_levels)*min_bucket_size;
+	int mem_size= (1<<(alloc->num_levels))*alloc->min_bucket_size;
 	//calculate level for page
 	int level = floor(log2(mem_size/(size+8)));
 	
 	//if the allocator does not have enough levels we just use the max level
-	if (level > alloc->num_levels) level = num_levels;
+	if (level > alloc->num_levels) level = alloc->num_levels;
 	printf("requested: %d bytes, level %d \n",
 	size, level);
 	// get a buddy of the right size
@@ -93,12 +94,10 @@ int minBuddy(BuddyAllocator* alloc, int level) //find the index of the smallest 
 	int i;
 	for (i = pow(2,level+1) - 1; i > 0; i--)
 	{
-		if (getBit(alloc->tree, i) return i;
+		if (getBit(alloc->tree, i)) return i;
 	}
 	return 0;
 	
-}
-char* chunkGivenIndex(char* memory, int idx{
 }
 //clearSons(BuddyAllocator alloc){//makes sure all sons of all allocated blocks are not free
 	//int i;
@@ -127,7 +126,7 @@ int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level){
 	for (currentNode = 0; currentNode < nSons; currentNode++)
 	{
 		clearBit(alloc->tree,toFree[currentNode]);
-		if(leftSon(toFree[currentNode]) < pow(2,alloc->num_levels)
+		if(leftSon(toFree[currentNode]) < pow(2,alloc->num_levels))
 		{
 			toFree[writeHere] = leftSon(toFree[currentNode]);
 			writeHere++;
@@ -137,19 +136,16 @@ int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level){
 	}
 	return idx;
 }
-int indexGivenChunk(char*memory)
-{
-}
 void releaseBuddy (BuddyAllocator* alloc, int idx)
 {
-	nParents = levelIdx(idx);
+	int nParents = levelIdx(idx);
 	int toCheck[nParents];
 	int i;
 	int writeHere = 1;
 	for (i = 0; i < nParents; i++) //probably not the best way to do it, no reason to use an array
 	{
 		setBit(alloc->tree,toCheck[i]);
-		if(getBit(alloc->tree,buddyIdx(toCheck[i])){
+		if(getBit(alloc->tree,buddyIdx(toCheck[i]))){
 			toCheck[writeHere] = parentIdx((alloc->tree[toCheck[i]]));
 			writeHere++;
 		}
@@ -164,21 +160,8 @@ void BuddyAllocator_free(BuddyAllocator* alloc, void* mem) {
 	//
 	releaseBuddy(alloc, idx);
 }
-//trovato il modo di trovare tutti i figli di un nodo
-//si fa un array di dimensione pari al numero di figli di un nodo
-//si calcola facendo 2 alla livello nono - livello massimo
-//poi si fa uno while
-//finché non ho superato l'index massimo
-//tengo traccia dell'ultimo index su cui ho scritto, sempre facendo ++
-//chiamiamo i l'index su cui ho scritto , praticamente sto facendo una arraylist
-//aggiungo il nodo da cui parte tutto a array[0]
-//solo dopo parte il while
-//all'inizio del giro prendo array[i]
-//lo libero e aggiungo i suoi figli all'array in posizione i+1 e i+2
-//ok ho sbagliato
-//l'errore è che mi devo segnare separatamente l'indice su cui ho scritto e l'indice dove si trova
-//l'ultimo nodo su cui ho lavorato
-//quindi si all'inizio dell'iterazione, si scrivono i due figli nell'array se sono nell'albero
-//semplicemente ogni volta che scrivo incremento il numero di dove devo scrivere
-//vado avanti nello scorrere l'array finché non finisco
-//notare che modifico l'array mentre ci sto lavorando
+//////////////////////////////////////////////////////////////////////////////////
+
+int main (){
+	printf("ciao\n");
+}
