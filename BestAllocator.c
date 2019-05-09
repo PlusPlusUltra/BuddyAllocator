@@ -74,7 +74,10 @@ void* BuddyAllocator_malloc(BuddyAllocator* alloc, int size){
 	int mem_size= (1<<(alloc->num_levels))*alloc->min_bucket_size;
 	//calculate level for page
 	int level = floor(log2(mem_size/(size+8)));
-	
+	if(level<0){
+		printf("error, requested %d bytes, there is not enough memory\n",size);
+		return NULL;
+	}
 	//if the allocator does not have enough levels we just use the max level
 	if (level > (alloc->num_levels - 1)) level = alloc->num_levels - 1;
 	printf("requested: %d bytes, level %d \n",
@@ -186,6 +189,21 @@ void BuddyAllocator_free(BuddyAllocator* alloc, void* mem) {
 	//
 	releaseBuddy(alloc, idx);
 }
+void BuddyAllocator_init(BuddyAllocator* alloc, char* mem, int minBucket, int numLevels, int* bitmap){
+	alloc->memory = mem;
+	alloc->min_bucket_size = minBucket;
+	alloc->num_levels = numLevels;
+	int numberOfBuddies = (int)(pow(2,numLevels));
+	//int bitmap[numberOfBuddies];
+	int i;
+	for (i = 0; i < numberOfBuddies; i++)
+	{
+		setBit(bitmap,i);
+	}
+	alloc->tree = bitmap;
+	printf("%d\n",alloc->tree[2]);
+
+}
 //////////////////////////////////////////////////////////////////////////////////
 #define BUDDY_LEVELS 9
 #define MEMORY_SIZE (1024*1024)
@@ -196,27 +214,40 @@ BuddyAllocator alloc;
 
 
 int main (){
-	alloc.memory = memory;
-	alloc.min_bucket_size = MIN_BUCKET_SIZE;
-	alloc.num_levels = BUDDY_LEVELS;
+	//alloc.memory = memory;
+	//alloc.min_bucket_size = MIN_BUCKET_SIZE;
+	//alloc.num_levels = BUDDY_LEVELS;
 	int numberOfBuddies = (int)(pow(2,BUDDY_LEVELS)/(sizeof(int)*8));
 	int bitmap[numberOfBuddies];
-	numberOfBuddies = numberOfBuddies * (sizeof(int)*8);
-	int i;
-	for (i = 0; i < numberOfBuddies; i++)
-	{
-		setBit(bitmap,i);
-	}
-	alloc.tree = bitmap;
+	//numberOfBuddies = numberOfBuddies * (sizeof(int)*8);
+	//int i;
+	//for (i = 0; i < numberOfBuddies; i++)
+	//{
+	//	setBit(bitmap,i);
+	//}
+	//alloc.tree = bitmap;
+	BuddyAllocator_init(&alloc, memory, MIN_BUCKET_SIZE, BUDDY_LEVELS,bitmap);
 	///////////////////////////////////////////////////////////////////////////////////////////////
-	void* p1=BuddyAllocator_malloc(&alloc, 400000);
-	void* p2=BuddyAllocator_malloc(&alloc, 400000);
+	void* p1=BuddyAllocator_malloc(&alloc, 2000000);
+	void* p2=BuddyAllocator_malloc(&alloc, 200000);
+	void* p3=BuddyAllocator_malloc(&alloc, 200000);
+	void* p4=BuddyAllocator_malloc(&alloc, 200000);
+	void* p5=BuddyAllocator_malloc(&alloc, 400000);
+	void* p6=BuddyAllocator_malloc(&alloc, 100);
 	BuddyAllocator_free(&alloc, p1);
-	void* p3=BuddyAllocator_malloc(&alloc, 100);
-	void* p4=BuddyAllocator_malloc(&alloc, 100);
 	BuddyAllocator_free(&alloc, p2);
+	void* p7=BuddyAllocator_malloc(&alloc, 400000);
 	BuddyAllocator_free(&alloc, p3);
+	void* p9=BuddyAllocator_malloc(&alloc, 400000);
 	BuddyAllocator_free(&alloc, p4);
+	BuddyAllocator_free(&alloc, p5);
+	BuddyAllocator_free(&alloc, p6);
+	BuddyAllocator_free(&alloc, p7);
+	BuddyAllocator_free(&alloc, p9);
+	void* p8=BuddyAllocator_malloc(&alloc, 800000);
+
+
+
 
 }
 //gcc -lm -g
