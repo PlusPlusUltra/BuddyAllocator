@@ -188,7 +188,6 @@ void BuddyAllocator_init(BuddyAllocator* alloc, char* mem, int minBucket, int nu
 		setBit(bitmap,i);
 	}
 	alloc->tree = bitmap;
-	printf("%d\n",alloc->tree[2]);
 
 }
 ////////////////////////////////////////////////////////////////////////
