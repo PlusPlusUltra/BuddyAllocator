@@ -119,21 +119,33 @@ int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level){
 		clearBit(alloc->tree,i);
 	}
 	int nSons = pow(2,alloc->num_levels-level) - 1;
-	int toFree[nSons];
+	int stack[(int)log2(nSons)+2];
 	int currentNode;
-	toFree[0]=idx;
-	int writeHere = 1;
-	for (currentNode = 0; currentNode < nSons; currentNode++)
+	stack[0]=idx;
+	int stackTop = 0;
+	clearBit(alloc->tree,stack[stackTop]);
+	for (int i = 0; i < nSons; i++)
 	{
-		clearBit(alloc->tree,toFree[currentNode]);
-		if(leftSon(toFree[currentNode]) < pow(2,alloc->num_levels))
+		clearBit(alloc->tree,stack[stackTop]);
+		if(leftSon(stack[stackTop]) < pow(2,alloc->num_levels))
 		{
-			toFree[writeHere] = leftSon(toFree[currentNode]);
-			writeHere++;
-			toFree[writeHere] = rightSon(toFree[currentNode]);
-			writeHere++;
+			int ogTop = stackTop;
+			stackTop++;
+			if(stackTop>=(int)log2(nSons)+2) stackTop=0;
+			//printf("%d\n", stackTop);
+			stack[stackTop] = rightSon(stack[ogTop]);
+			stackTop++;
+			if(stackTop>=(int)log2(nSons)+2) stackTop=0;
+			//printf("%d\n", stackTop);
+			stack[stackTop] = leftSon(stack[ogTop]);
+		}
+		else{
+			stackTop--;
+			if(stackTop<0) stackTop = (int)log2(nSons)+1;
+			//printf("%d\n", stackTop);
 		}
 	}
+	
 	return idx;
 }
 void releaseBuddy (BuddyAllocator* alloc, int idx)
@@ -147,21 +159,33 @@ void releaseBuddy (BuddyAllocator* alloc, int idx)
 		else break;
 	}
 	int nSons = pow(2,alloc->num_levels-levelIdx(idx2)) - 1;
-	int toFree[nSons];
+	int stack[(int)log2(nSons)+2];
 	int currentNode;
-	toFree[0]=idx2;
-	int writeHere = 1;
-	for (currentNode = 0; currentNode < nSons; currentNode++)
+	stack[0]=idx;
+	int stackTop = 0;
+	clearBit(alloc->tree,stack[stackTop]);
+	for (int i = 0; i < nSons; i++)
 	{
-		setBit(alloc->tree,toFree[currentNode]);
-		if(leftSon(toFree[currentNode]) < pow(2,alloc->num_levels))
+		setBit(alloc->tree,stack[stackTop]);
+		if(leftSon(stack[stackTop]) < pow(2,alloc->num_levels))
 		{
-			toFree[writeHere] = leftSon(toFree[currentNode]);
-			writeHere++;
-			toFree[writeHere] = rightSon(toFree[currentNode]);
-			writeHere++;
+			int ogTop = stackTop;
+			stackTop++;
+			if(stackTop>=(int)log2(nSons)+2) stackTop=0;
+			//printf("%d\n", stackTop);
+			stack[stackTop] = rightSon(stack[ogTop]);
+			stackTop++;
+			if(stackTop>=(int)log2(nSons)+2) stackTop=0;
+			//printf("%d\n", stackTop);
+			stack[stackTop] = leftSon(stack[ogTop]);
+		}
+		else{
+			stackTop--;
+			if(stackTop<0) stackTop = (int)log2(nSons)+1;
+			//printf("%d\n", stackTop);
 		}
 	}
+	
 }
 void BuddyAllocator_free(BuddyAllocator* alloc, void* mem) {
 	if(!mem){
