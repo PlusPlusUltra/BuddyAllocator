@@ -34,7 +34,7 @@ typedef struct {
 	int num_levels;
 	char* memory;
 	int min_bucket_size;
-	int tree[];
+	int* tree;
 
 } BuddyAllocator;
 int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level);
@@ -76,11 +76,15 @@ void* BuddyAllocator_malloc(BuddyAllocator* alloc, int size){
 	int level = floor(log2(mem_size/(size+8)));
 	
 	//if the allocator does not have enough levels we just use the max level
-	if (level > alloc->num_levels) level = alloc->num_levels;
+	if (level > (alloc->num_levels - 1)) level = alloc->num_levels - 1;
 	printf("requested: %d bytes, level %d \n",
 	size, level);
 	// get a buddy of the right size
-	int buddy = BuddyAllocator_getBuddy(alloc,size);
+	//check later if this is correct
+	int buddy = BuddyAllocator_getBuddy(alloc,level);
+	if(buddy==0){
+		return NULL;
+	}
 	//write in the memory
 	void* ret = chunkGivenIndex(alloc, buddy);
 	int* forLater = (int*)ret;
@@ -96,6 +100,7 @@ int minBuddy(BuddyAllocator* alloc, int level) //find the index of the smallest 
 	{
 		if (getBit(alloc->tree, i)) return i;
 	}
+	printf("error, no buddy found\n");
 	return 0;
 	
 }
@@ -108,23 +113,28 @@ int minBuddy(BuddyAllocator* alloc, int level) //find the index of the smallest 
 int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level){
 	if (level<0) return 0;
 	int idx = minBuddy(alloc, level);
+	if(idx == 0){
+		return 0;
+	}
 	clearBit(alloc->tree,idx);
 	//all parents and all sons are not free anymore
 	int i;
 	for (i = idx; i > 0; i=parentIdx(i))
 	{
-		clearBit(alloc->tree,idx);
+		clearBit(alloc->tree,i);
 	}
+
 	//i don't know how to clear sons. i can only do this using recursion and like this
 	//clearSons(alloc);
 	//nevermind i found it
-	int nSons = pow(2,alloc->num_levels-level);
+	int nSons = pow(2,alloc->num_levels-level) - 2;
 	int toFree[nSons];
 	int currentNode;
 	toFree[0]=idx;
 	int writeHere = 1;
 	for (currentNode = 0; currentNode < nSons; currentNode++)
 	{
+		//printf("c\n");
 		clearBit(alloc->tree,toFree[currentNode]);
 		if(leftSon(toFree[currentNode]) < pow(2,alloc->num_levels))
 		{
@@ -153,15 +163,48 @@ void releaseBuddy (BuddyAllocator* alloc, int idx)
 	}
 }
 void BuddyAllocator_free(BuddyAllocator* alloc, void* mem) {
-	printf("freeing %p", mem);
+	if(!mem){
+		printf("error, %p is a NULL pointer\n", mem);
+		return;
+	}
+	printf("freeing %p\n", mem);
+	mem = mem - 8;
 	int* retr = (int*) mem;
-	retr = retr - 8;
 	int idx = *retr;
 	//
 	releaseBuddy(alloc, idx);
 }
 //////////////////////////////////////////////////////////////////////////////////
+#define BUDDY_LEVELS 9
+#define MEMORY_SIZE (1024*1024)
+#define MIN_BUCKET_SIZE (MEMORY_SIZE>>(BUDDY_LEVELS))
+//#define NUMBER_OF_BUDDIES ((int)(pow(2,BUDDY_LEVELS)/(sizeof(int)*8)))
+char memory[MEMORY_SIZE];
+BuddyAllocator alloc;
+
 
 int main (){
-	printf("ciao\n");
+	alloc.memory = memory;
+	alloc.min_bucket_size = MIN_BUCKET_SIZE;
+	alloc.num_levels = BUDDY_LEVELS;
+	int numberOfBuddies = (int)(pow(2,BUDDY_LEVELS)/(sizeof(int)*8));
+	int bitmap[numberOfBuddies];
+	numberOfBuddies = numberOfBuddies * (sizeof(int)*8);
+	int i;
+	for (i = 0; i < numberOfBuddies; i++)
+	{
+		setBit(bitmap,i);
+	}
+	alloc.tree = bitmap;
+	///////////////////////////////////////////////////////////////////////////////////////////////
+	void* p1=BuddyAllocator_malloc(&alloc, 100);
+	//void* p2=BuddyAllocator_malloc(&alloc, 100);
+	//void* p3=BuddyAllocator_malloc(&alloc, 100000);
+	//void* p4=BuddyAllocator_malloc(&alloc, 800000);
+	BuddyAllocator_free(&alloc, p1);
+	//BuddyAllocator_free(&alloc, p2);
+	//BuddyAllocator_free(&alloc, p3);
+	//BuddyAllocator_free(&alloc, p4);
 }
+//gcc -lm -g
+//gdb nomeEx
