@@ -127,7 +127,7 @@ int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level){
 	//i don't know how to clear sons. i can only do this using recursion and like this
 	//clearSons(alloc);
 	//nevermind i found it
-	int nSons = pow(2,alloc->num_levels-level) - 2;
+	int nSons = pow(2,alloc->num_levels-level) - 1;
 	int toFree[nSons];
 	int currentNode;
 	toFree[0]=idx;
@@ -148,18 +148,30 @@ int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level){
 }
 void releaseBuddy (BuddyAllocator* alloc, int idx)
 {
-	int nParents = levelIdx(idx);
-	int toCheck[nParents];
-	int i;
-	int writeHere = 1;
-	for (i = 0; i < nParents; i++) //probably not the best way to do it, no reason to use an array
-	{
-		setBit(alloc->tree,toCheck[i]);
-		if(getBit(alloc->tree,buddyIdx(toCheck[i]))){
-			toCheck[writeHere] = parentIdx((alloc->tree[toCheck[i]]));
-			writeHere++;
+	int idx2 = idx; //i need idx to free descendants as well
+	while (idx > 0){
+		setBit(alloc->tree,idx);
+		if(getBit(alloc->tree,buddyIdx(idx))){
+			idx = parentIdx(idx);
 		}
 		else break;
+	}
+	int nSons = pow(2,alloc->num_levels-levelIdx(idx2)) - 1;
+	int toFree[nSons];
+	int currentNode;
+	toFree[0]=idx2;
+	int writeHere = 1;
+	for (currentNode = 0; currentNode < nSons; currentNode++)
+	{
+		//printf("c\n");
+		setBit(alloc->tree,toFree[currentNode]);
+		if(leftSon(toFree[currentNode]) < pow(2,alloc->num_levels))
+		{
+			toFree[writeHere] = leftSon(toFree[currentNode]);
+			writeHere++;
+			toFree[writeHere] = rightSon(toFree[currentNode]);
+			writeHere++;
+		}
 	}
 }
 void BuddyAllocator_free(BuddyAllocator* alloc, void* mem) {
@@ -197,14 +209,17 @@ int main (){
 	}
 	alloc.tree = bitmap;
 	///////////////////////////////////////////////////////////////////////////////////////////////
-	void* p1=BuddyAllocator_malloc(&alloc, 100);
-	//void* p2=BuddyAllocator_malloc(&alloc, 100);
-	//void* p3=BuddyAllocator_malloc(&alloc, 100000);
-	//void* p4=BuddyAllocator_malloc(&alloc, 800000);
+	void* p1=BuddyAllocator_malloc(&alloc, 400000);
+	void* p2=BuddyAllocator_malloc(&alloc, 400000);
 	BuddyAllocator_free(&alloc, p1);
-	//BuddyAllocator_free(&alloc, p2);
-	//BuddyAllocator_free(&alloc, p3);
-	//BuddyAllocator_free(&alloc, p4);
+	void* p3=BuddyAllocator_malloc(&alloc, 100);
+	void* p4=BuddyAllocator_malloc(&alloc, 100);
+	BuddyAllocator_free(&alloc, p2);
+	BuddyAllocator_free(&alloc, p3);
+	BuddyAllocator_free(&alloc, p4);
+
 }
 //gcc -lm -g
 //gdb nomeEx
+//note, level 0 exists, so if there are 8 levels the last number is 7
+//on the other hand node 0 does not exist, if the node number 0 is returned there was an error
