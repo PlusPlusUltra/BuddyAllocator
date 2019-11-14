@@ -3,15 +3,14 @@
 #define BUDDY_LEVELS 9
 #define MEMORY_SIZE (1024*1024)
 #define MIN_BUCKET_SIZE (MEMORY_SIZE>>(BUDDY_LEVELS))
-char memory[MEMORY_SIZE];
-BuddyAllocator alloc;
+AllocatorHolder holder;
 
 
 int main (){
-	int numberOfBuddies = (int)(pow(2,BUDDY_LEVELS)/(sizeof(int)*8));
-	int bitmap[numberOfBuddies];
-	BuddyAllocator_init(&alloc, memory, MIN_BUCKET_SIZE, BUDDY_LEVELS,bitmap);
+	
+	AllocatorHolder_init(&holder, MIN_BUCKET_SIZE, BUDDY_LEVELS);
 	///////////////////////////////////////////////////////////////////////////////////////////////
+	/*
 	void* p1=BuddyAllocator_malloc(&alloc, 2000000);
 	void* p2=BuddyAllocator_malloc(&alloc, 200000);
 	void* p3=BuddyAllocator_malloc(&alloc, 200000);
@@ -29,4 +28,5 @@ int main (){
 	BuddyAllocator_free(&alloc, p7);
 	BuddyAllocator_free(&alloc, p9);
 	void* p8=BuddyAllocator_malloc(&alloc, 800000);
+	*/ 
 }

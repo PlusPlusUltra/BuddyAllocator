@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <unistd.h>
 //functions to work with integers as if they were bits
 //i will store the bitmap as an array of integers and then work with the single bits of each integer
 void setBit(int array[], int bitIndex) //sets the bit at index bitIndex
@@ -39,6 +40,9 @@ typedef struct {
 
 } BuddyAllocator;
 int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level);
+typedef struct {
+	BuddyAllocator* currentAllocator;
+} AllocatorHolder;
 //tree functions
 int levelIdx(size_t idx)
 {
@@ -83,6 +87,9 @@ void* chunkGivenIndex(BuddyAllocator* alloc, int idx){
 	int firstOfLevel = pow(2,level);
 	int toAdd = alloc->min_bucket_size * (alloc->num_levels - level) * (idx - firstOfLevel);
 	return alloc->memory + toAdd;
+}
+int sizeGivenLevels(int levels){ //you have to multiply this times the size of the smallest chunk
+	int ret = pow(2,(levels-1));
 }
 void* BuddyAllocator_malloc(BuddyAllocator* alloc, int size){
 	//calculate max mem
@@ -267,6 +274,16 @@ void BuddyAllocator_init(BuddyAllocator* alloc, char* mem, int minBucket, int nu
 	alloc->tree = bitmap;
 
 }
+void AllocatorHolder_init(AllocatorHolder* holder, int minBucket, int numLevels){
+	printf("Initializing first allocator\n");
+	int numberOfBuddies = (int)(pow(2,numLevels)/(sizeof(int)*8));
+	int* bitmap = malloc(numberOfBuddies*sizeof(int));
+	int firstBuffer = sizeGivenLevels(numLevels)*minBucket;
+	BuddyAllocator* firstAlloc = malloc(sizeof(BuddyAllocator));
+	char* mem = sbrk(firstBuffer);
+	BuddyAllocator_init(firstAlloc, mem, minBucket, numLevels, bitmap);
+	holder->currentAllocator = firstAlloc;
+}
 void transferToNewAllocator(BuddyAllocator* oldAllocator, BuddyAllocator* newAllocator)
 {
 	//here is assumed that newAllocator was already initialized
@@ -282,17 +299,41 @@ void transferToNewAllocator(BuddyAllocator* oldAllocator, BuddyAllocator* newAll
 		}
 	}
 }
-void* myMalloc(BuddyAllocator* alloc, int size){
-	void* ret = BuddyAllocator_malloc(alloc,size);
-	BuddyAllocator* oldAlloc = alloc;
+void* myMalloc(AllocatorHolder* holder, int size){
+	BuddyAllocator* oldAlloc = holder->currentAllocator;
+	void* ret = BuddyAllocator_malloc(oldAlloc,size);
 	while(ret == NULL)
 	{
 		int toIncrement = 1;
-		while(size > (alloc->min_bucket_size)*pow(2,(alloc->num_levels)+toIncrement)){ //if we already know the new allocator is going to be too small there is no point in trying
+		while(size > (oldAlloc->min_bucket_size)*sizeGivenLevels(oldAlloc->num_levels+toIncrement)){ //if we already know the new allocator is going to be too small there is no point in trying
 			toIncrement++;
 		}
+		oldAlloc = holder->currentAllocator;
+		int newLevel = oldAlloc->num_levels + toIncrement;
 		//initialize new allocator
+		BuddyAllocator* newAlloc = malloc(sizeof(BuddyAllocator));
+		//note that i am using the actual malloc here. It looks a little off, but this is the reason.
+		//another option would be to permanently have a few buddies occupied for storing the variables
+		//necessary for the allocators, but that would be kind of annoying for testing the allocator.
+		//I think that what is important is that it could be done. Also, using the malloc here will not
+		//interfere with the allocators. In fact there are for sure some parts of the heap that are not
+		//storing anything that are lower that the start of the buffer of the allocators. So the malloc
+		//will not increase the program break, and when i will need a very big chunk of memory the malloc will
+		//use mmap and not sbrk to allocate it. I have done multiple tests and experiments, and the only time
+		//when using malloc increased the program break was when trying to allocate a lot of not-too-big
+		//chunks of memory, which is never being done here.
+		int NewNumberOfBuddies = (int)(pow(2,newLevel)/(sizeof(int)*8));
+		int levelChange = newLevel - oldAlloc->num_levels;
+		int bufferDifference = (sizeGivenLevels(newLevel)-sizeGivenLevels(oldAlloc->num_levels)) * oldAlloc->min_bucket_size;
+		sbrk(bufferDifference);
+		int* newBitmap = malloc(NewNumberOfBuddies*sizeof(int));
+		BuddyAllocator_init(newAlloc, oldAlloc->memory, oldAlloc->min_bucket_size, newLevel,newBitmap);
 		transferToNewAllocator(oldAlloc, newAlloc);
+		printf("Tree size increase, new number of levels: %d\n",newLevel);
+		holder->currentAllocator = newAlloc;
+		free(oldAlloc->tree);
+		free(oldAlloc);
+		ret = BuddyAllocator_malloc(newAlloc, size);
 		//sono troppo stanco per continuare, ecco quello che rimane da fare
 		//creare una struct che contenga il buddy allocator attuale, a questa funzione si passa
 		//quella struct invece di un buddy allocator. Quando si alloca il nuovo allocator la struct si
@@ -307,8 +348,15 @@ void* myMalloc(BuddyAllocator* alloc, int size){
 		//si riesce a mallocare e la myMalloc di quella implementazione funziona su una lista di
 		//Buddy allocator invece che su uno solo. Ogni volta che si crea un nuovo buddy allocator si
 		//aggiunge alla lista
+		//using the actual malloc for allocating BuddyAllocators and trees should not be a problem, in my expereiments
+		//i saw that it is difficult that that changes the program break
+		//ricordarsi di fare la prima print prima della sbrk con cui inizializzo il primo buddyAllocator
 	}
-	
+	return ret;
+}
+void myFree(AllocatorHolder* holder, void* mem)
+{
+	BuddyAllocator_free(holder->currentAllocator, mem);
 }
 ////////////////////////////////////////////////////////////////////////
 //note, level 0 exists, so if there are 8 levels the last number is 7
