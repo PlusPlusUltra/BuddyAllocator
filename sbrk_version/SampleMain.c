@@ -10,8 +10,8 @@ int main (){
 	
 	AllocatorHolder_init(&holder, MIN_BUCKET_SIZE, BUDDY_LEVELS);
 	///////////////////////////////////////////////////////////////////////////////////////////////
-	
 	void* p1=myMalloc(&holder, 2000000);
+	myFree(&holder,p1);
 	void* p2=myMalloc(&holder, 200000);
 	void* p3=myMalloc(&holder, 200000);
 	void* p4=myMalloc(&holder, 200000);

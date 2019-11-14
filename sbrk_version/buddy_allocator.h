@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <unistd.h>
+#define MIN_LEVELS 9
 //functions to work with integers as if they were bits
 //i will store the bitmap as an array of integers and then work with the single bits of each integer
 void setBit(int array[], int bitIndex) //sets the bit at index bitIndex
@@ -70,6 +71,24 @@ int nthOfLevel(int idx){
 	int Idxlog = (int)floor(log2(idx));
 	int powerOf2 = pow(2,Idxlog);
 	int ret = idx%powerOf2;
+	return ret;
+}
+int isRightSideFree(int* tree, int levels){
+	int ret = 1;
+	int i;
+	for (int i = 0; i < levels; i++)
+	{
+		int firstRight;
+		if(i == 0) firstRight = 1;
+		else{
+			firstRight = 3*pow(2,i-1);
+		}
+		for (int j = firstRight; j < pow(2,i+1); j++)
+		{
+			if(!getBit(tree,pow(2,i) + j)) return 0;
+		}
+		
+	}
 	return ret;
 }
 int newIdx(int oldIdx, int sizeChange) //corresponding index when adding levels to a tree
@@ -336,20 +355,6 @@ void* myMalloc(AllocatorHolder* holder, int size){
 		free(oldAlloc->tree);
 		free(oldAlloc);
 		ret = BuddyAllocator_malloc(newAlloc, size);
-		//sono troppo stanco per continuare, ecco quello che rimane da fare
-		//creare una struct che contenga il buddy allocator attuale, a questa funzione si passa
-		//quella struct invece di un buddy allocator. Quando si alloca il nuovo allocator la struct si
-		//prende quello come nuovo allocator e si scorda quello vecchio.
-		//per il resto di queesta funzione, non appena si reisce a portare a termine la buddyallocatormalloc
-		//e si è eventualmente cambiato il buddyAllocator atturale la funzione restituisce il 
-		//chunk di memoria della malloc riuscita.
-		//ricordare che il buffer del primo Buddy allocator, e di tutti quelli che vengono dopo è il buffer dato da
-		//sbrk al momento di creare il primo Buddy (BuddyAllocator1 = sbrk(millemila))
-		//quando si crea un nuovo BuddyAllocator si deve ripetere la sbrk
-		//Per l'altra implementazione basta creare un nuovo buddy allocator ogni volta che non
-		//si riesce a mallocare e la myMalloc di quella implementazione funziona su una lista di
-		//Buddy allocator invece che su uno solo. Ogni volta che si crea un nuovo buddy allocator si
-		//aggiunge alla lista
 		//using the actual malloc for allocating BuddyAllocators and trees should not be a problem, in my expereiments
 		//i saw that it is difficult that that changes the program break
 		//ricordarsi di fare la prima print prima della sbrk con cui inizializzo il primo buddyAllocator
@@ -359,6 +364,24 @@ void* myMalloc(AllocatorHolder* holder, int size){
 void myFree(AllocatorHolder* holder, void* mem)
 {
 	BuddyAllocator_free(holder->currentAllocator, mem);
+	
+	while(isRightSideFree(holder->currentAllocator->tree,holder->currentAllocator->num_levels) && holder->currentAllocator->num_levels > MIN_LEVELS)
+	{
+		BuddyAllocator* oldAlloc = holder->currentAllocator;
+		BuddyAllocator* newAlloc = malloc(sizeof(BuddyAllocator));
+		int newLevel = oldAlloc->num_levels - 1;
+		int NewNumberOfBuddies = (int)(pow(2,newLevel)/(sizeof(int)*8));
+		int levelChange = -1;
+		int bufferDifference = (sizeGivenLevels(newLevel)-sizeGivenLevels(oldAlloc->num_levels)) * oldAlloc->min_bucket_size;
+		sbrk(bufferDifference);
+		int* newBitmap = malloc(NewNumberOfBuddies*sizeof(int));
+		BuddyAllocator_init(newAlloc, oldAlloc->memory, oldAlloc->min_bucket_size, newLevel,newBitmap);
+		transferToNewAllocator(oldAlloc, newAlloc);
+		printf("Tree size decrease, new number of levels: %d\n",newLevel);
+		holder->currentAllocator = newAlloc;
+		free(oldAlloc->tree);
+		free(oldAlloc);
+	}
 }
 ////////////////////////////////////////////////////////////////////////
 //note, level 0 exists, so if there are 8 levels the last number is 7
