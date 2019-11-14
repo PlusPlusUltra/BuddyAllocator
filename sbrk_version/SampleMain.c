@@ -10,23 +10,23 @@ int main (){
 	
 	AllocatorHolder_init(&holder, MIN_BUCKET_SIZE, BUDDY_LEVELS);
 	///////////////////////////////////////////////////////////////////////////////////////////////
-	/*
-	void* p1=BuddyAllocator_malloc(&alloc, 2000000);
-	void* p2=BuddyAllocator_malloc(&alloc, 200000);
-	void* p3=BuddyAllocator_malloc(&alloc, 200000);
-	void* p4=BuddyAllocator_malloc(&alloc, 200000);
-	void* p5=BuddyAllocator_malloc(&alloc, 400000);
-	void* p6=BuddyAllocator_malloc(&alloc, 100);
-	BuddyAllocator_free(&alloc, p1);
-	BuddyAllocator_free(&alloc, p2);
-	void* p7=BuddyAllocator_malloc(&alloc, 400000);
-	BuddyAllocator_free(&alloc, p3);
-	void* p9=BuddyAllocator_malloc(&alloc, 400000);
-	BuddyAllocator_free(&alloc, p4);
-	BuddyAllocator_free(&alloc, p5);
-	BuddyAllocator_free(&alloc, p6);
-	BuddyAllocator_free(&alloc, p7);
-	BuddyAllocator_free(&alloc, p9);
-	void* p8=BuddyAllocator_malloc(&alloc, 800000);
-	*/ 
+	
+	void* p1=myMalloc(&holder, 2000000);
+	void* p2=myMalloc(&holder, 200000);
+	void* p3=myMalloc(&holder, 200000);
+	void* p4=myMalloc(&holder, 200000);
+	void* p5=myMalloc(&holder, 400000);
+	void* p6=myMalloc(&holder, 100);
+	void* p10=myMalloc(&holder,8000000);
+	myFree(&holder, p1);
+	myFree(&holder, p2);
+	void* p7=myMalloc(&holder, 400000);
+	myFree(&holder, p3);
+	void* p9=myMalloc(&holder, 400000);
+	myFree(&holder, p4);
+	myFree(&holder, p5);
+	myFree(&holder, p6);
+	myFree(&holder, p7);
+	myFree(&holder, p9);
+	void* p8=myMalloc(&holder, 800000); 
 }

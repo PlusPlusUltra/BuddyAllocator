@@ -89,7 +89,8 @@ void* chunkGivenIndex(BuddyAllocator* alloc, int idx){
 	return alloc->memory + toAdd;
 }
 int sizeGivenLevels(int levels){ //you have to multiply this times the size of the smallest chunk
-	int ret = pow(2,(levels-1));
+	//int ret = pow(2,(levels-1));
+	int ret = pow(2,levels);
 }
 void* BuddyAllocator_malloc(BuddyAllocator* alloc, int size){
 	//calculate max mem
@@ -102,7 +103,7 @@ void* BuddyAllocator_malloc(BuddyAllocator* alloc, int size){
 	}
 	//if the allocator does not have enough levels we just use the max level
 	if (level > (alloc->num_levels - 1)) level = alloc->num_levels - 1;
-	printf("requested: %d bytes, level %d \n",
+	printf("requested: %d bytes, level %d\n",
 	size, level);
 	// get a buddy of the right size
 	int buddy = BuddyAllocator_getBuddy(alloc,level);
@@ -114,6 +115,7 @@ void* BuddyAllocator_malloc(BuddyAllocator* alloc, int size){
 	int* forLater = (int*)ret;
 	ret += 8;
 	*forLater = buddy;
+	printf("%p given\n",ret);
 	return ret;
 }
 int minBuddy(BuddyAllocator* alloc, int level) //find the index of the smallest available buddy
