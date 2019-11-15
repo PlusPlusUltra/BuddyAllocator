@@ -155,7 +155,7 @@ int minBuddy(BuddyAllocator* alloc, int level) //find the index of the smallest 
 	{
 		if (getBit(alloc->tree, i)) return i;
 	}
-	printf("error, no buddy found\n");
+	//printf("error, no buddy found\n");
 	return 0;
 	
 }
@@ -192,10 +192,6 @@ void releaseBuddy (BuddyAllocator* alloc, int idx)
 		}
 		else break;
 	}
-	//#include <sys/resource.h>
-	//register long int rsp asm("rsp");
-	//printf("%lx",rsp);
-	//printf("1\n");
 	
 	recSetAllSons(alloc->tree,alloc->num_levels,idx2);
 	
@@ -260,17 +256,16 @@ void transferToNewAllocatorFree(BuddyAllocator* oldAllocator, BuddyAllocator* ne
 {
 	//here is assumed that newAllocator was already initialized
 	int oldAllocatorNNodes = pow(2,oldAllocator->num_levels);//this is actually NNodes+1
-	if(node == 0){
-		if(!getBit(oldAllocator->tree,node)){
-			BuddyAllocator_unFree(newAllocator, newIdx(node, newAllocator->num_levels-oldAllocator->num_levels));
-			int* overwrite = chunkGivenIndex(newAllocator, node); //we overwrite the old index, written at the beginning of the chunk
-			*overwrite = node;
-		}
+	if(node == 1){
+		//if(!getBit(oldAllocator->tree,node)){
+			//BuddyAllocator_unFree(newAllocator, newIdx(node, newAllocator->num_levels-oldAllocator->num_levels));
+			//int* overwrite = chunkGivenIndex(newAllocator, node); //we overwrite the old index, written at the beginning of the chunk
+			//*overwrite = node;
+		//}
 		transferToNewAllocatorFree(oldAllocator, newAllocator, leftSon(node));
 	 }
 	else{
 		if(!getBit(oldAllocator->tree,node)){
-			printf("XDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD\n");
 			BuddyAllocator_unFree(newAllocator, newIdx(node, newAllocator->num_levels-oldAllocator->num_levels));
 			int* overwrite = chunkGivenIndex(newAllocator, node); //we overwrite the old index, written at the beginning of the chunk
 			*overwrite = node;
@@ -343,7 +338,6 @@ void myFree(AllocatorHolder* holder, void* mem)
 		free(oldAlloc->tree);
 		free(oldAlloc);
 	}
-	printf("root is %d\n",getBit(holder->currentAllocator->tree,1));
 }
 ////////////////////////////////////////////////////////////////////////
 //note, level 0 exists, so if there are 8 levels the last number is 7

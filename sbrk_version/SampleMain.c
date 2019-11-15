@@ -11,32 +11,17 @@ int main (){
 	AllocatorHolder_init(&holder, MIN_BUCKET_SIZE, BUDDY_LEVELS);
 	///////////////////////////////////////////////////////////////////////////////////////////////
 	
-
-	//myFree(&holder,p1);
 	
 	void* p1=myMalloc(&holder, 2000000);
-	//myFree(&holder,p1);
 	void* p2=myMalloc(&holder, 200000);
 	myFree(&holder,p2);	
 	void* p3=myMalloc(&holder, 200000);
 	void* p4=myMalloc(&holder, 200000);
-	myFree(&holder,p2);
-	//printTree(holder.currentAllocator->tree,holder.currentAllocator->num_levels);
 	void* p5=myMalloc(&holder, 4000000);
-	//printTree(holder.currentAllocator->tree,holder.currentAllocator->num_levels);
-	myFree(&holder,p5);
-	//printTree(holder.currentAllocator->tree,holder.currentAllocator->num_levels);
-	//void* p6=myMalloc(&holder, 100);
-	//void* p10=myMalloc(&holder,8000000);
-	//myFree(&holder, p1);
-	//myFree(&holder, p2);
-	//void* p7=myMalloc(&holder, 400000);
 	myFree(&holder, p3);
 	void* p9=myMalloc(&holder, 400000);
 	myFree(&holder, p4);
-	//myFree(&holder, p5);
-	//myFree(&holder, p6);
-	//myFree(&holder, p7);
+	myFree(&holder, p5);
 	myFree(&holder, p9);
 	void* p8=myMalloc(&holder, 800000);
 }
