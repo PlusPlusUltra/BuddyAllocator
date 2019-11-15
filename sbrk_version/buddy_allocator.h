@@ -32,6 +32,17 @@ int getBit(int array[], int bitIndex) //returns the value of the bit at index bi
 	if (array[intIndex] & flag) return 1;
 	else return 0;
 }
+void printTree(int* tree, int levels){
+	for (int i = 0; i < levels; i++)
+	{
+		for (int j = 0; j < pow(2,i);j++)
+		{
+			printf("%d",getBit(tree,pow(2,i)+j));
+		}
+		printf("\n");
+	}
+	
+}
 //let's create the struct
 typedef struct {
 	int num_levels;
@@ -73,23 +84,8 @@ int nthOfLevel(int idx){
 	int ret = idx%powerOf2;
 	return ret;
 }
-int isRightSideFree(int* tree, int levels){
-	int ret = 1;
-	int i;
-	for (int i = 0; i < levels; i++)
-	{
-		int firstRight;
-		if(i == 0) firstRight = 1;
-		else{
-			firstRight = 3*pow(2,i-1);
-		}
-		for (int j = firstRight; j < pow(2,i+1); j++)
-		{
-			if(!getBit(tree,pow(2,i) + j)) return 0;
-		}
-		
-	}
-	return ret;
+int isRightSideFree(int* tree){
+	return getBit(tree,3);
 }
 int newIdx(int oldIdx, int sizeChange) //corresponding index when adding levels to a tree
 {
@@ -98,6 +94,20 @@ int newIdx(int oldIdx, int sizeChange) //corresponding index when adding levels 
 	int newLevel = oldLevel + sizeChange;
 	int ret = pow(2,newLevel) + nth;
 	return ret;
+}
+void recClearAllSons(int*tree, int levels, int father){
+	clearBit(tree, father);
+	if(leftSon(father)< pow(2,levels)){
+		recClearAllSons(tree,levels,leftSon(father));
+		recClearAllSons(tree,levels,rightSon(father));
+	}
+}
+void recSetAllSons(int*tree, int levels, int father){
+	setBit(tree, father);
+	if(leftSon(father)< pow(2,levels)){
+		recSetAllSons(tree,levels,leftSon(father));
+		recSetAllSons(tree,levels,rightSon(father));
+	}
 }
 
 //allocator functions
@@ -135,6 +145,7 @@ void* BuddyAllocator_malloc(BuddyAllocator* alloc, int size){
 	ret += 8;
 	*forLater = buddy;
 	printf("%p given\n",ret);
+	//printTree(alloc->tree,alloc->num_levels);
 	return ret;
 }
 int minBuddy(BuddyAllocator* alloc, int level) //find the index of the smallest available buddy
@@ -157,33 +168,8 @@ int BuddyAllocator_unFree(BuddyAllocator* alloc, int idx){
 	{
 		clearBit(alloc->tree,i);
 	}
-	int nSons = pow(2,alloc->num_levels-level) - 1;
-	int stack[(int)log2(nSons)+2];
-	int currentNode;
-	stack[0]=idx;
-	int stackTop = 0;
-	clearBit(alloc->tree,stack[stackTop]);
-	for (int i = 0; i < nSons; i++)
-	{
-		clearBit(alloc->tree,stack[stackTop]);
-		if(leftSon(stack[stackTop]) < pow(2,alloc->num_levels))
-		{
-			int ogTop = stackTop;
-			stackTop++;
-			if(stackTop>=(int)log2(nSons)+2) stackTop=0;
-			//printf("%d\n", stackTop);
-			stack[stackTop] = rightSon(stack[ogTop]);
-			stackTop++;
-			if(stackTop>=(int)log2(nSons)+2) stackTop=0;
-			//printf("%d\n", stackTop);
-			stack[stackTop] = leftSon(stack[ogTop]);
-		}
-		else{
-			stackTop--;
-			if(stackTop<0) stackTop = (int)log2(nSons)+1;
-			//printf("%d\n", stackTop);
-		}
-	}
+	recClearAllSons(alloc->tree, alloc->num_levels,idx);
+	
 	return 0;
 }
 int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level){
@@ -192,40 +178,7 @@ int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level){
 	if(idx == 0){
 		return 0;
 	}
-	clearBit(alloc->tree,idx);
-	//all parents and all sons are not free anymore
-	int i;
-	for (i = idx; i > 0; i=parentIdx(i))
-	{
-		clearBit(alloc->tree,i);
-	}
-	int nSons = pow(2,alloc->num_levels-level) - 1;
-	int stack[(int)log2(nSons)+2];
-	int currentNode;
-	stack[0]=idx;
-	int stackTop = 0;
-	clearBit(alloc->tree,stack[stackTop]);
-	for (int i = 0; i < nSons; i++)
-	{
-		clearBit(alloc->tree,stack[stackTop]);
-		if(leftSon(stack[stackTop]) < pow(2,alloc->num_levels))
-		{
-			int ogTop = stackTop;
-			stackTop++;
-			if(stackTop>=(int)log2(nSons)+2) stackTop=0;
-			//printf("%d\n", stackTop);
-			stack[stackTop] = rightSon(stack[ogTop]);
-			stackTop++;
-			if(stackTop>=(int)log2(nSons)+2) stackTop=0;
-			//printf("%d\n", stackTop);
-			stack[stackTop] = leftSon(stack[ogTop]);
-		}
-		else{
-			stackTop--;
-			if(stackTop<0) stackTop = (int)log2(nSons)+1;
-			//printf("%d\n", stackTop);
-		}
-	}
+	BuddyAllocator_unFree(alloc,idx);
 	
 	return idx;
 }
@@ -239,33 +192,12 @@ void releaseBuddy (BuddyAllocator* alloc, int idx)
 		}
 		else break;
 	}
-	int nSons = pow(2,alloc->num_levels-levelIdx(idx2)) - 1;
-	int stack[(int)log2(nSons)+2];
-	int currentNode;
-	stack[0]=idx;
-	int stackTop = 0;
-	clearBit(alloc->tree,stack[stackTop]);
-	for (int i = 0; i < nSons; i++)
-	{
-		setBit(alloc->tree,stack[stackTop]);
-		if(leftSon(stack[stackTop]) < pow(2,alloc->num_levels))
-		{
-			int ogTop = stackTop;
-			stackTop++;
-			if(stackTop>=(int)log2(nSons)+2) stackTop=0;
-			//printf("%d\n", stackTop);
-			stack[stackTop] = rightSon(stack[ogTop]);
-			stackTop++;
-			if(stackTop>=(int)log2(nSons)+2) stackTop=0;
-			//printf("%d\n", stackTop);
-			stack[stackTop] = leftSon(stack[ogTop]);
-		}
-		else{
-			stackTop--;
-			if(stackTop<0) stackTop = (int)log2(nSons)+1;
-			//printf("%d\n", stackTop);
-		}
-	}
+	//#include <sys/resource.h>
+	//register long int rsp asm("rsp");
+	//printf("%lx",rsp);
+	//printf("1\n");
+	
+	recSetAllSons(alloc->tree,alloc->num_levels,idx2);
 	
 }
 void BuddyAllocator_free(BuddyAllocator* alloc, void* mem) {
@@ -278,6 +210,7 @@ void BuddyAllocator_free(BuddyAllocator* alloc, void* mem) {
 	int* retr = (int*) mem;
 	int idx = *retr;
 	releaseBuddy(alloc, idx);
+	//printTree(alloc->tree,alloc->num_levels);
 }
 void BuddyAllocator_init(BuddyAllocator* alloc, char* mem, int minBucket, int numLevels, int* bitmap){
 	//the number of levels, the minimum bucket size, the amount of memory and the amount 
@@ -308,9 +241,9 @@ void AllocatorHolder_init(AllocatorHolder* holder, int minBucket, int numLevels)
 void transferToNewAllocator(BuddyAllocator* oldAllocator, BuddyAllocator* newAllocator)
 {
 	//here is assumed that newAllocator was already initialized
-	int i = 0;
 	int oldAllocatorNNodes = pow(2,oldAllocator->num_levels);//this is actually NNodes+1
-	for (int i = 1; i < oldAllocatorNNodes; i++);
+	int i;	
+	for (i = 1; i < oldAllocatorNNodes; i++)
 	{
 		if(!getBit(oldAllocator->tree,i))
 		{
@@ -319,11 +252,40 @@ void transferToNewAllocator(BuddyAllocator* oldAllocator, BuddyAllocator* newAll
 			*overwrite = i;
 		}
 	}
+	//printTree(oldAllocator->tree,oldAllocator->num_levels);
+	//printTree(newAllocator->tree,newAllocator->num_levels);
+
 }
+void transferToNewAllocatorFree(BuddyAllocator* oldAllocator, BuddyAllocator* newAllocator, int node)
+{
+	//here is assumed that newAllocator was already initialized
+	int oldAllocatorNNodes = pow(2,oldAllocator->num_levels);//this is actually NNodes+1
+	if(node == 0){
+		if(!getBit(oldAllocator->tree,node)){
+			BuddyAllocator_unFree(newAllocator, newIdx(node, newAllocator->num_levels-oldAllocator->num_levels));
+			int* overwrite = chunkGivenIndex(newAllocator, node); //we overwrite the old index, written at the beginning of the chunk
+			*overwrite = node;
+		}
+		transferToNewAllocatorFree(oldAllocator, newAllocator, leftSon(node));
+	 }
+	else{
+		if(!getBit(oldAllocator->tree,node)){
+			printf("XDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD\n");
+			BuddyAllocator_unFree(newAllocator, newIdx(node, newAllocator->num_levels-oldAllocator->num_levels));
+			int* overwrite = chunkGivenIndex(newAllocator, node); //we overwrite the old index, written at the beginning of the chunk
+			*overwrite = node;
+		}
+		if(leftSon(node) < pow(2,oldAllocator->num_levels)){
+			transferToNewAllocatorFree(oldAllocator, newAllocator, leftSon(node));
+			transferToNewAllocatorFree(oldAllocator, newAllocator, rightSon(node));
+		}
+	}
+}
+
 void* myMalloc(AllocatorHolder* holder, int size){
 	BuddyAllocator* oldAlloc = holder->currentAllocator;
 	void* ret = BuddyAllocator_malloc(oldAlloc,size);
-	while(ret == NULL)
+	while(!ret)
 	{
 		int toIncrement = 1;
 		while(size > (oldAlloc->min_bucket_size)*sizeGivenLevels(oldAlloc->num_levels+toIncrement)){ //if we already know the new allocator is going to be too small there is no point in trying
@@ -333,16 +295,6 @@ void* myMalloc(AllocatorHolder* holder, int size){
 		int newLevel = oldAlloc->num_levels + toIncrement;
 		//initialize new allocator
 		BuddyAllocator* newAlloc = malloc(sizeof(BuddyAllocator));
-		//note that i am using the actual malloc here. It looks a little off, but this is the reason.
-		//another option would be to permanently have a few buddies occupied for storing the variables
-		//necessary for the allocators, but that would be kind of annoying for testing the allocator.
-		//I think that what is important is that it could be done. Also, using the malloc here will not
-		//interfere with the allocators. In fact there are for sure some parts of the heap that are not
-		//storing anything that are lower that the start of the buffer of the allocators. So the malloc
-		//will not increase the program break, and when i will need a very big chunk of memory the malloc will
-		//use mmap and not sbrk to allocate it. I have done multiple tests and experiments, and the only time
-		//when using malloc increased the program break was when trying to allocate a lot of not-too-big
-		//chunks of memory, which is never being done here.
 		int NewNumberOfBuddies = (int)(pow(2,newLevel)/(sizeof(int)*8));
 		int levelChange = newLevel - oldAlloc->num_levels;
 		int bufferDifference = (sizeGivenLevels(newLevel)-sizeGivenLevels(oldAlloc->num_levels)) * oldAlloc->min_bucket_size;
@@ -357,15 +309,24 @@ void* myMalloc(AllocatorHolder* holder, int size){
 		ret = BuddyAllocator_malloc(newAlloc, size);
 		//using the actual malloc for allocating BuddyAllocators and trees should not be a problem, in my expereiments
 		//i saw that it is difficult that that changes the program break
-		//ricordarsi di fare la prima print prima della sbrk con cui inizializzo il primo buddyAllocator
 	}
 	return ret;
 }
+//note that i am using the actual malloc here. It looks a little off, but this is the reason.
+		//another option would be to permanently have a few buddies occupied for storing the variables
+		//necessary for the allocators, but that would be kind of annoying for testing the allocator.
+		//I think that what is important is that it could be done. Also, using the malloc here will not
+		//interfere with the allocators. In fact there are for sure some parts of the heap that are not
+		//storing anything that are lower that the start of the buffer of the allocators. So the malloc
+		//will not increase the program break, and when i will need a very big chunk of memory the malloc will
+		//use mmap and not sbrk to allocate it. I have done multiple tests and experiments, and the only time
+		//when using malloc increased the program break was when trying to allocate a lot of not-too-big
+		//chunks of memory, which is never being done here.
+		
 void myFree(AllocatorHolder* holder, void* mem)
 {
 	BuddyAllocator_free(holder->currentAllocator, mem);
-	
-	while(isRightSideFree(holder->currentAllocator->tree,holder->currentAllocator->num_levels) && holder->currentAllocator->num_levels > MIN_LEVELS)
+	while(isRightSideFree(holder->currentAllocator->tree) && holder->currentAllocator->num_levels > MIN_LEVELS)
 	{
 		BuddyAllocator* oldAlloc = holder->currentAllocator;
 		BuddyAllocator* newAlloc = malloc(sizeof(BuddyAllocator));
@@ -376,12 +337,13 @@ void myFree(AllocatorHolder* holder, void* mem)
 		sbrk(bufferDifference);
 		int* newBitmap = malloc(NewNumberOfBuddies*sizeof(int));
 		BuddyAllocator_init(newAlloc, oldAlloc->memory, oldAlloc->min_bucket_size, newLevel,newBitmap);
-		transferToNewAllocator(oldAlloc, newAlloc);
+		transferToNewAllocatorFree(oldAlloc, newAlloc,1);
 		printf("Tree size decrease, new number of levels: %d\n",newLevel);
 		holder->currentAllocator = newAlloc;
 		free(oldAlloc->tree);
 		free(oldAlloc);
 	}
+	printf("root is %d\n",getBit(holder->currentAllocator->tree,1));
 }
 ////////////////////////////////////////////////////////////////////////
 //note, level 0 exists, so if there are 8 levels the last number is 7
