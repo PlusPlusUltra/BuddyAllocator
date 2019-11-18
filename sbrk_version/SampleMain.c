@@ -19,9 +19,9 @@ int main (){
 	void* p4=myMalloc(&holder, 200000);
 	void* p5=myMalloc(&holder, 4000000);
 	myFree(&holder, p3);
-	void* p9=myMalloc(&holder, 400000);
+	void* p6=myMalloc(&holder, 400000);
 	myFree(&holder, p4);
 	myFree(&holder, p5);
-	myFree(&holder, p9);
-	void* p8=myMalloc(&holder, 800000);
+	myFree(&holder, p6);
+	void* p7=myMalloc(&holder, 800000);
 }
