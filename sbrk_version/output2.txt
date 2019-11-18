@@ -1,0 +1,16 @@
+Initializing first allocator
+requested: 100 bytes, level 8
+0x559b12a74808 given
+freeing 0x559b12a74808
+Tree size increase, new number of levels: 10
+requested: 2000000 bytes, level 0
+0x559b129f5008 given
+requested: 200000 bytes, level 3
+Tree size increase, new number of levels: 11
+requested: 200000 bytes, level 4
+0x559b12a29808 given
+requested: 20000 bytes, level 7
+0x559b12ae3008 given
+freeing 0x559b12a29808
+freeing 0x559b12ae3008
+Tree size decrease, new number of levels: 10
