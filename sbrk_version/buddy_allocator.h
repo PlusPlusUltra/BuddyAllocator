@@ -280,10 +280,12 @@ void transferToNewAllocatorFree(BuddyAllocator* oldAllocator, BuddyAllocator* ne
 void* myMalloc(AllocatorHolder* holder, int size){
 	BuddyAllocator* oldAlloc = holder->currentAllocator;
 	void* ret = BuddyAllocator_malloc(oldAlloc,size);
+	int iterations = 0;
+	int toIncrement = 1;
 	while(!ret)
 	{
-		int toIncrement = 1;
 		while(size > (oldAlloc->min_bucket_size)*sizeGivenLevels(oldAlloc->num_levels+toIncrement)){ //if we already know the new allocator is going to be too small there is no point in trying
+			if(iterations>=1) printf("iterations: %d\n", iterations);
 			toIncrement++;
 		}
 		oldAlloc = holder->currentAllocator;
@@ -301,9 +303,11 @@ void* myMalloc(AllocatorHolder* holder, int size){
 		holder->currentAllocator = newAlloc;
 		free(oldAlloc->tree);
 		free(oldAlloc);
+		oldAlloc = newAlloc;
 		ret = BuddyAllocator_malloc(newAlloc, size);
 		//using the actual malloc for allocating BuddyAllocators and trees should not be a problem, in my expereiments
 		//i saw that it is difficult that that changes the program break
+		iterations++;
 	}
 	return ret;
 }
